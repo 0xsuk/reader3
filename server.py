@@ -7,6 +7,8 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from bs4 import BeautifulSoup
+from bs4.element import PageElement
 
 from reader3 import Book, BookMetadata, ChapterContent, TOCEntry
 
@@ -61,6 +63,47 @@ async def redirect_to_first_chapter(request: Request, book_id: str):
     """Helper to just go to chapter 0."""
     return await read_chapter(request=request, book_id=book_id, chapter_index=0)
 
+def build_subsection_content(html: str, anchor: Optional[str]) -> Optional[str]:
+    if not anchor:
+        return None
+
+    soup = BeautifulSoup(html, "html.parser")
+    target = soup.find(id=anchor)
+    if not target:
+        target = soup.find(attrs={"name": anchor})
+    if not target:
+        target = soup.find("a", href=f"#{anchor}")
+    if not target:
+        return None
+
+    heading_levels = {"h1", "h2", "h3", "h4", "h5", "h6"}
+
+    def get_heading_level(node: object) -> Optional[int]:
+        node_name = getattr(node, "name", None)
+        if isinstance(node_name, str) and node_name in heading_levels:
+            return int(node_name[1])
+        return None
+
+    start = target
+    start_level = get_heading_level(start)
+    if start_level is None:
+        heading_parent = target.find_parent(heading_levels)
+        if heading_parent is not None:
+            start = heading_parent
+            start_level = get_heading_level(start)
+
+    section_nodes: list[PageElement] = [start]
+    for sibling in list(start.next_siblings):
+        sibling_name = getattr(sibling, "name", None)
+        if isinstance(sibling_name, str) and sibling_name in heading_levels:
+            sibling_level = int(sibling_name[1])
+            if start_level is None or sibling_level <= start_level:
+                break
+        section_nodes.append(sibling)
+
+    return "".join(str(node) for node in section_nodes)
+
+
 @app.get("/read/{book_id}/{chapter_index}", response_class=HTMLResponse)
 async def read_chapter(request: Request, book_id: str, chapter_index: int):
     """The main reader interface."""
@@ -72,6 +115,18 @@ async def read_chapter(request: Request, book_id: str, chapter_index: int):
         raise HTTPException(status_code=404, detail="Chapter not found")
 
     current_chapter = book.spine[chapter_index]
+    anchor = request.query_params.get("anchor")
+    subsection_content = build_subsection_content(current_chapter.content, anchor)
+
+    if subsection_content is not None:
+        current_chapter = ChapterContent(
+            id=current_chapter.id,
+            href=current_chapter.href,
+            title=current_chapter.title,
+            content=subsection_content,
+            text=current_chapter.text,
+            order=current_chapter.order,
+        )
 
     # Calculate Prev/Next links
     prev_idx = chapter_index - 1 if chapter_index > 0 else None
@@ -84,7 +139,9 @@ async def read_chapter(request: Request, book_id: str, chapter_index: int):
         "chapter_index": chapter_index,
         "book_id": book_id,
         "prev_idx": prev_idx,
-        "next_idx": next_idx
+        "next_idx": next_idx,
+        "anchor": anchor,
+        "is_subsection": subsection_content is not None,
     })
 
 @app.get("/read/{book_id}/images/{image_name}")
