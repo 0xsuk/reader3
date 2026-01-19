@@ -20,6 +20,7 @@
 
 ## Reader Sidebar Behavior
 - The sidebar renders the EPUB TOC tree (`book.toc`), including nested sections and subsections.
+- Clicking a TOC item filters the list to show only that item's sub sections.
 - Chapter and subsection clicks both map to the same spine file (linear chapter file).
 - The JS strips anchors and routes to `/read/{book_id}/{spine_index}`, so the full chapter loads.
-- Subsection clicks do not scroll to anchors; they land at the top of the chapter file.
+

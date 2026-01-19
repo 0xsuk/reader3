@@ -87,7 +87,7 @@
 
                        BETTER FIX: Use JavaScript to match filenames.
                     -->
-                    <a href="#" onclick="findAndGo('{{ item.file_href }}', '{{ item.anchor }}', {{ 'true' if item.children else 'false' }})"
+                    <a href="#" onclick="findAndGo('{{ item.file_href }}', '{{ item.anchor }}')"
                        class="toc-link {% if is_active %}active{% endif %}">
                         {{ item.title }}
                     </a>
@@ -154,7 +154,7 @@
             localStorage.setItem("reader3SidebarCollapsed", String(!isCollapsed));
         }
 
-        function findAndGo(filename, anchor, isParent) {
+        function findAndGo(filename, anchor) {
             // The TOC usually has specific filenames e.g. "text/part001.html"
             // Sometimes it has anchors "text/part001.html#header"
             // We strip the anchor to find the page index
@@ -164,7 +164,7 @@
 
             if (idx !== undefined) {
                 let url = "/read/{{ book_id }}/" + idx;
-                if (anchor && !isParent) {
+                if (anchor) {
                     url += "?anchor=" + encodeURIComponent(anchor);
                 }
                 window.location.href = url;
