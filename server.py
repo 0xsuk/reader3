@@ -57,9 +57,9 @@ async def library_view(request: Request):
     return templates.TemplateResponse("library.html", {"request": request, "books": books})
 
 @app.get("/read/{book_id}", response_class=HTMLResponse)
-async def redirect_to_first_chapter(book_id: str):
+async def redirect_to_first_chapter(request: Request, book_id: str):
     """Helper to just go to chapter 0."""
-    return await read_chapter(book_id=book_id, chapter_index=0)
+    return await read_chapter(request=request, book_id=book_id, chapter_index=0)
 
 @app.get("/read/{book_id}/{chapter_index}", response_class=HTMLResponse)
 async def read_chapter(request: Request, book_id: str, chapter_index: int):
@@ -106,6 +106,15 @@ async def serve_image(book_id: str, image_name: str):
     return FileResponse(img_path)
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
-    print("Starting server at http://127.0.0.1:8123")
-    uvicorn.run(app, host="127.0.0.1", port=8123)
+
+    parser = argparse.ArgumentParser(description="Run the reader server")
+    parser.add_argument("--books-dir", default=BOOKS_DIR, help="Directory containing *_data book folders")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8123)
+    args = parser.parse_args()
+
+    BOOKS_DIR = args.books_dir
+    print(f"Starting server at http://{args.host}:{args.port} (books dir: {BOOKS_DIR})")
+    uvicorn.run(app, host=args.host, port=args.port)
