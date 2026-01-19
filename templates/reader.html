@@ -65,7 +65,7 @@
                         Ideally we match spine indices, but Reader 3 TOC maps to filenames.
                         We use a simple hash matching logic here.
                     -->
-                    {% set is_active = current_chapter.href == item.file_href %}
+                    {% set is_active = current_chapter.href == item.file_href and ((anchor and item.anchor == anchor) or (not anchor and not item.anchor)) %}
 
                     <!--
                        We need to find which linear chapter index (0, 1, 2) corresponds
