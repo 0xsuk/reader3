@@ -1,4 +1,10 @@
+this is a fork that
+- support sub section click
+- add close toc button
+
 # reader 3
+
+
 
 ![reader3](reader3.png)
 
